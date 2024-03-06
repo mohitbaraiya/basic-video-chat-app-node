@@ -1,18 +1,13 @@
 import path from "path";
 import { createServer, Server as HTTPServer } from "http";
 import express, { Application } from "express";
-import { Server as SocketIoServer } from "socket.io";
 import morgan from "morgan";
+import { Socket } from "./socket";
+import { BaseRouter } from "./routes";
 
-interface ActiveSockets {
-  username: string;
-  id: string;
-}
 export class Server {
   #httpServer: HTTPServer;
   #app: Application;
-  #io: SocketIoServer;
-  #activeSockets: ActiveSockets[];
   readonly #port: number = 4000;
   readonly #staticFilesPath = path.join(__dirname, "../public");
 
@@ -20,67 +15,27 @@ export class Server {
     // app initialization
     this.#app = express();
     this.#httpServer = createServer(this.#app);
-    this.#io = new SocketIoServer(this.#httpServer);
-    this.#activeSockets = [];
 
-    this.#serveStaticFiles();
-    this.#setUpLogging();
-    this.#handleRoutes();
     this.#handleSocketConnection();
+    this.#serverConfig();
   }
 
   //   handle http routes
   #handleRoutes(): void {
-    this.#app.get("/", (req, res) => {
-      res.send(`<h1>Hello world</h1>`);
-    });
+    this.#app.use(new BaseRouter().router);
   }
 
   //   handle socket communication
   #handleSocketConnection(): void {
-    this.#io.on("connection", (socket) => {
-      console.log("connected");
-
-      socket.on("add-user", ({ username, id }) => {
-        console.log(username);
-
-        const socketExists = this.#activeSockets.find(
-          (existingSocket) => existingSocket.id === id
-        );
-        if (!socketExists) {
-          this.#activeSockets.push({ id: id, username: username });
-
-          socket.emit("update-user-list", {
-            users: this.#activeSockets,
-          });
-        }
-      });
-
-      socket.on("call-user", (data) => {
-        socket.to(data.to).emit("call-made", {
-          offer: data.offer,
-          socket: socket.id,
-        });
-      });
-
-      socket.on("make-answer", (data) => {
-        socket.to(data.to).emit("answer-made", {
-          socket: socket.id,
-          answer: data.answer,
-        });
-      });
-
-      socket.on("disconnect", () => {
-        this.#activeSockets = this.#activeSockets.filter(
-          (existingSocket) => existingSocket.id !== socket.id
-        );
-        socket.broadcast.emit("remove-user", {
-          socketId: socket.id,
-        });
-      });
-    });
+    new Socket(this.#httpServer);
   }
 
+  //   server configuration
+  #serverConfig() {
+    this.#serveStaticFiles();
+    this.#setUpLogging();
+    this.#handleRoutes();
+  }
   // serve static files
   #serveStaticFiles(): void {
     this.#app.use(express.static(this.#staticFilesPath));
