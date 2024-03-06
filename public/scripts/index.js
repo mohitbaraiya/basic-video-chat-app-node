@@ -1,9 +1,10 @@
 import { io } from "https://cdn.socket.io/4.7.4/socket.io.esm.min.js";
 
 let isAlreadyCalling = false;
-let getCalled = false;
+const username = prompt("Enter your full name: ");
+// let getCalled = false;
 
-const existingCalls = [];
+// const existingCalls = [];
 
 const { RTCPeerConnection, RTCSessionDescription } = window;
 
@@ -49,7 +50,7 @@ async function callUser(socketId) {
     to: socketId,
   });
 }
-function createUserItemContainer(socketId) {
+function createUserItemContainer(socketId, username) {
   const userContainerEl = document.createElement("div");
 
   const usernameEl = document.createElement("p");
@@ -57,7 +58,7 @@ function createUserItemContainer(socketId) {
   userContainerEl.setAttribute("class", "active-user");
   userContainerEl.setAttribute("id", socketId);
   usernameEl.setAttribute("class", "username");
-  usernameEl.innerHTML = `Socket: ${socketId}`;
+  usernameEl.innerHTML = `Username: ${username} </br> Socket: ${socketId}`;
 
   userContainerEl.appendChild(usernameEl);
 
@@ -73,10 +74,10 @@ function createUserItemContainer(socketId) {
 function updateUserList(socketIds) {
   const activeUserContainer = document.getElementById("active-user-container");
 
-  socketIds.forEach((socketId) => {
+  socketIds.forEach(({ username, id: socketId }) => {
     const alreadyExistingUser = document.getElementById(socketId);
     if (!alreadyExistingUser) {
-      const userContainerEl = createUserItemContainer(socketId);
+      const userContainerEl = createUserItemContainer(socketId, username);
       activeUserContainer.appendChild(userContainerEl);
     }
   });
@@ -84,38 +85,41 @@ function updateUserList(socketIds) {
 
 // socket code
 const socket = io.connect();
-
-socket.on("update-user-list", ({ users }) => {
-  updateUserList(users);
-});
-socket.on("remove-user", ({ socketId }) => {
-  const elToRemove = document.getElementById(socketId);
-
-  if (elToRemove) {
-    elToRemove.remove();
-  }
-});
-
-socket.on("call-made", async (data) => {
-  await peerConnection.setRemoteDescription(
-    new RTCSessionDescription(data.offer)
-  );
-  const answer = await peerConnection.createAnswer();
-  await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
-
-  socket.emit("make-answer", {
-    answer,
-    to: data.socket,
+socket.on("connect", () => {
+  socket.emit("add-user", { username, id: socket.id });
+  socket.on("update-user-list", ({ users }) => {
+    console.log(users);
+    updateUserList(users.filter((user) => user.id !== socket.id));
   });
-});
+  socket.on("remove-user", ({ socketId }) => {
+    const elToRemove = document.getElementById(socketId);
 
-socket.on("answer-made", async (data) => {
-  await peerConnection.setRemoteDescription(
-    new RTCSessionDescription(data.answer)
-  );
+    if (elToRemove) {
+      elToRemove.remove();
+    }
+  });
 
-  if (!isAlreadyCalling) {
-    callUser(data.socket);
-    isAlreadyCalling = true;
-  }
+  socket.on("call-made", async (data) => {
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.offer)
+    );
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
+
+    socket.emit("make-answer", {
+      answer,
+      to: data.socket,
+    });
+  });
+
+  socket.on("answer-made", async (data) => {
+    await peerConnection.setRemoteDescription(
+      new RTCSessionDescription(data.answer)
+    );
+
+    if (!isAlreadyCalling) {
+      callUser(data.socket);
+      isAlreadyCalling = true;
+    }
+  });
 });

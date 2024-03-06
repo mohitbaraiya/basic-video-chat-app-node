@@ -4,11 +4,15 @@ import express, { Application } from "express";
 import { Server as SocketIoServer } from "socket.io";
 import morgan from "morgan";
 
+interface ActiveSockets {
+  username: string;
+  id: string;
+}
 export class Server {
   #httpServer: HTTPServer;
   #app: Application;
   #io: SocketIoServer;
-  #activeSockets: string[];
+  #activeSockets: ActiveSockets[];
   readonly #port: number = 4000;
   readonly #staticFilesPath = path.join(__dirname, "../public");
 
@@ -37,23 +41,20 @@ export class Server {
     this.#io.on("connection", (socket) => {
       console.log("connected");
 
-      const socketExists = this.#activeSockets.find(
-        (existingSocket) => existingSocket === socket.id
-      );
+      socket.on("add-user", ({ username, id }) => {
+        console.log(username);
 
-      if (!socketExists) {
-        this.#activeSockets.push(socket.id);
+        const socketExists = this.#activeSockets.find(
+          (existingSocket) => existingSocket.id === id
+        );
+        if (!socketExists) {
+          this.#activeSockets.push({ id: id, username: username });
 
-        socket.emit("update-user-list", {
-          users: this.#activeSockets.filter(
-            (socketExists) => socketExists !== socket.id
-          ),
-        });
-
-        socket.broadcast.emit("update-user-list", {
-          users: [socket.id],
-        });
-      }
+          socket.emit("update-user-list", {
+            users: this.#activeSockets,
+          });
+        }
+      });
 
       socket.on("call-user", (data) => {
         socket.to(data.to).emit("call-made", {
@@ -71,7 +72,7 @@ export class Server {
 
       socket.on("disconnect", () => {
         this.#activeSockets = this.#activeSockets.filter(
-          (existingSocket) => existingSocket !== socket.id
+          (existingSocket) => existingSocket.id !== socket.id
         );
         socket.broadcast.emit("remove-user", {
           socketId: socket.id,
