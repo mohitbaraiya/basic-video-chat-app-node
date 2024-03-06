@@ -68,7 +68,7 @@ function createUserItemContainer(socketId, username) {
   userContainerEl.setAttribute("class", "active-user");
   userContainerEl.setAttribute("id", socketId);
   usernameEl.setAttribute("class", "username");
-  usernameEl.innerHTML = `Username: ${username} </br> Socket: ${socketId}`;
+  usernameEl.innerHTML = `Username: ${username} <br/> Socket: ${socketId}`;
 
   userContainerEl.appendChild(usernameEl);
 
