@@ -1,7 +1,9 @@
+import path from "path";
 import { createServer, Server as HTTPServer } from "http";
 import express, { Application } from "express";
-import socketIO, { Server as SocketIoServer } from "socket.io";
-import path from "path";
+import { Server as SocketIoServer } from "socket.io";
+import morgan from "morgan";
+
 export class Server {
   #httpServer: HTTPServer;
   #app: Application;
@@ -16,6 +18,7 @@ export class Server {
     this.#io = new SocketIoServer(this.#httpServer);
 
     this.#serveStaticFiles();
+    this.#setUpLogging();
     this.#handleRoutes();
     this.#handleSocketConnection();
   }
@@ -37,6 +40,11 @@ export class Server {
   // serve static files
   #serveStaticFiles(): void {
     this.#app.use(express.static(this.#staticFilesPath));
+  }
+
+  //   setup logging in server
+  #setUpLogging(): void {
+    this.#app.use(morgan("tiny"));
   }
   listen(callback: (port: number) => void): void {
     this.#httpServer.listen(this.#port, callback.bind(null, this.#port));
