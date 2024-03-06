@@ -1,11 +1,13 @@
 import { createServer, Server as HTTPServer } from "http";
 import express, { Application } from "express";
 import socketIO, { Server as SocketIoServer } from "socket.io";
+import path from "path";
 export class Server {
   #httpServer: HTTPServer;
   #app: Application;
   #io: SocketIoServer;
   readonly #port: number = 4000;
+  readonly #staticFilesPath = path.join(__dirname, "../public");
 
   constructor() {
     // app initialization
@@ -13,6 +15,7 @@ export class Server {
     this.#httpServer = createServer(this.#app);
     this.#io = new SocketIoServer(this.#httpServer);
 
+    this.#serveStaticFiles();
     this.#handleRoutes();
     this.#handleSocketConnection();
   }
@@ -29,6 +32,11 @@ export class Server {
     this.#io.on("connection", () => {
       console.log("connected");
     });
+  }
+
+  // serve static files
+  #serveStaticFiles(): void {
+    this.#app.use(express.static(this.#staticFilesPath));
   }
   listen(callback: (port: number) => void): void {
     this.#httpServer.listen(this.#port, callback.bind(null, this.#port));
