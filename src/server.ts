@@ -8,6 +8,7 @@ export class Server {
   #httpServer: HTTPServer;
   #app: Application;
   #io: SocketIoServer;
+  #activeSockets: string[];
   readonly #port: number = 4000;
   readonly #staticFilesPath = path.join(__dirname, "../public");
 
@@ -16,6 +17,7 @@ export class Server {
     this.#app = express();
     this.#httpServer = createServer(this.#app);
     this.#io = new SocketIoServer(this.#httpServer);
+    this.#activeSockets = [];
 
     this.#serveStaticFiles();
     this.#setUpLogging();
@@ -32,8 +34,26 @@ export class Server {
 
   //   handle socket communication
   #handleSocketConnection(): void {
-    this.#io.on("connection", () => {
+    this.#io.on("connection", (socket) => {
       console.log("connected");
+
+      const socketExists = this.#activeSockets.find(
+        (existingSocket) => existingSocket === socket.id
+      );
+
+      if (!socketExists) {
+        this.#activeSockets.push(socket.id);
+
+        socket.emit("update-user-list", {
+          users: this.#activeSockets.filter(
+            (socketExists) => socketExists !== socket.id
+          ),
+        });
+
+        socket.broadcast.emit("update-user-list", {
+          users: [socket.id],
+        });
+      }
     });
   }
 
