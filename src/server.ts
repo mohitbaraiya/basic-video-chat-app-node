@@ -8,17 +8,13 @@ export class Server {
   readonly #port: number = 4000;
 
   constructor() {
-    this.#initialize();
-
-    this.#handleRoutes();
-    this.#handleSocketConnection();
-  }
-
-  //   app initialization
-  #initialize(): void {
+    // app initialization
     this.#app = express();
     this.#httpServer = createServer(this.#app);
     this.#io = new SocketIoServer(this.#httpServer);
+
+    this.#handleRoutes();
+    this.#handleSocketConnection();
   }
 
   //   handle http routes
