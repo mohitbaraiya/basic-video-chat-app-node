@@ -9,19 +9,29 @@ const username = prompt("Enter your full name: ");
 const { RTCPeerConnection, RTCSessionDescription } = window;
 
 const peerConnection = new RTCPeerConnection();
-
-navigator.getUserMedia(
-  { video: true, audio: true },
-  (stream) => {
-    const localVideo = document.getElementById("local-video");
-    if (localVideo && stream) {
-      localVideo.srcObject = stream;
-      stream
-        .getTracks()
-        .forEach((track) => peerConnection.addTrack(track, stream));
-    }
-  },
-  (error) => console.error(error)
+const usermediaParams = { video: true, audio };
+function userMediaListener(stream) {
+  const localVideo = document.getElementById("local-video");
+  if (localVideo && stream) {
+    localVideo.srcObject = stream;
+    stream
+      .getTracks()
+      .forEach((track) => peerConnection.addTrack(track, stream));
+  }
+}
+function usermediaErrorHandler() {
+  console.error(error);
+}
+let getMediaFunction = "getUserMedia";
+if (typeof navigator?.mozGetUserMedia === "function") {
+  getMediaFunction = "mozGetUserMedia";
+} else if (typeof navigator?.webkitGetUserMedia === "function") {
+  getMediaFunction = webkitGetUserMedia;
+}
+navigator[getMediaFunction](
+  usermediaParams,
+  userMediaListener,
+  usermediaErrorHandler
 );
 
 function unselectUsersFromList() {
