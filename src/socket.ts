@@ -27,8 +27,6 @@ export class Socket {
       console.log("connected");
 
       socket.on("add-user", ({ username, id }) => {
-        console.log(username, " added in active list");
-
         const socketExists = this.#activeSockets.find(
           (existingSocket) => existingSocket.id === id
         );
