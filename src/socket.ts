@@ -1,5 +1,7 @@
-import { createServer, Server as HTTPServer } from "http";
+import { config } from "dotenv";
+import { Server as HTTPServer } from "http";
 import { Server as SocketIoServer } from "socket.io";
+config();
 interface ActiveSockets {
   username: string;
   id: string;
@@ -9,7 +11,14 @@ export class Socket {
   #activeSockets: ActiveSockets[];
 
   constructor(httpServer: HTTPServer) {
-    this.#io = new SocketIoServer(httpServer);
+    this.#io = new SocketIoServer(httpServer, {
+      cors: {
+        origin: [
+          process.env.SOCKET_CORS_URL || "",
+          "http://192.168.29.46:5173",
+        ],
+      },
+    });
     this.#handleSocketConnection();
     this.#activeSockets = [];
   }
@@ -18,21 +27,30 @@ export class Socket {
       console.log("connected");
 
       socket.on("add-user", ({ username, id }) => {
-        console.log(username);
+        console.log(username, " added in active list");
 
         const socketExists = this.#activeSockets.find(
           (existingSocket) => existingSocket.id === id
         );
         if (!socketExists) {
           this.#activeSockets.push({ id: id, username: username });
-
-          socket.emit("update-user-list", {
-            users: this.#activeSockets,
-          });
         }
+        console.log(this.#activeSockets);
+        socket.emit("new-user-add");
+        this.#io.emit("update-user-list", {
+          users: this.#activeSockets,
+        });
       });
 
       socket.on("call-user", (data) => {
+        console.log(
+          "call for ",
+          this.#activeSockets.find((active) => active.id === data.to)?.username,
+          " from " +
+            this.#activeSockets.find((active) => active.id === socket.id)
+              ?.username
+        );
+
         socket.to(data.to).emit("call-made", {
           offer: data.offer,
           socket: socket.id,
@@ -40,6 +58,13 @@ export class Socket {
       });
 
       socket.on("make-answer", (data) => {
+        console.log(
+          "make answer for ",
+          this.#activeSockets.find((active) => active.id === data.to)?.username,
+          " from " +
+            this.#activeSockets.find((active) => active.id === socket.id)
+              ?.username
+        );
         socket.to(data.to).emit("answer-made", {
           socket: socket.id,
           answer: data.answer,
@@ -47,6 +72,11 @@ export class Socket {
       });
 
       socket.on("disconnect", () => {
+        console.log(
+          "user disconnect ",
+          this.#activeSockets.find((active) => active.id === socket.id)
+            ?.username
+        );
         this.#activeSockets = this.#activeSockets.filter(
           (existingSocket) => existingSocket.id !== socket.id
         );

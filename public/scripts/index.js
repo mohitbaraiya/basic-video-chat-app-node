@@ -9,7 +9,7 @@ const username = prompt("Enter your full name: ");
 const { RTCPeerConnection, RTCSessionDescription } = window;
 
 const peerConnection = new RTCPeerConnection();
-const usermediaParams = { video: true, audio };
+const usermediaParams = { video: true, audio: true };
 function userMediaListener(stream) {
   const localVideo = document.getElementById("local-video");
   if (localVideo && stream) {
@@ -19,14 +19,14 @@ function userMediaListener(stream) {
       .forEach((track) => peerConnection.addTrack(track, stream));
   }
 }
-function usermediaErrorHandler() {
+function usermediaErrorHandler(error) {
   console.error(error);
 }
 let getMediaFunction = "getUserMedia";
 if (typeof navigator?.mozGetUserMedia === "function") {
   getMediaFunction = "mozGetUserMedia";
 } else if (typeof navigator?.webkitGetUserMedia === "function") {
-  getMediaFunction = webkitGetUserMedia;
+  getMediaFunction = "webkitGetUserMedia";
 }
 navigator[getMediaFunction](
   usermediaParams,
@@ -82,6 +82,7 @@ function createUserItemContainer(socketId, username) {
   return userContainerEl;
 }
 function updateUserList(socketIds) {
+  console.log(socketIds);
   const activeUserContainer = document.getElementById("active-user-container");
 
   socketIds.forEach(({ username, id: socketId }) => {
