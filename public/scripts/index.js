@@ -82,7 +82,6 @@ function createUserItemContainer(socketId, username) {
   return userContainerEl;
 }
 function updateUserList(socketIds) {
-  console.log(socketIds);
   const activeUserContainer = document.getElementById("active-user-container");
 
   socketIds.forEach(({ username, id: socketId }) => {
