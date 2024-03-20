@@ -15,6 +15,7 @@ export class Socket {
       cors: {
         origin: [
           process.env.SOCKET_CORS_URL || "",
+          "https://159b-2405-201-2024-a1f6-e4e6-cb07-bc83-6760.ngrok-free.app",
           "http://192.168.29.46:5173",
         ],
       },
